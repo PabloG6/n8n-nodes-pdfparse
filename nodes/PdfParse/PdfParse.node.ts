@@ -103,9 +103,19 @@ const properties: INodeProperties[] = [
     required: true,
     default: "",
     displayOptions: {
-      show: { resource: ["document", "row", "table"] },
-      hide: { operation: ["getMany"], resource: ["table"] },
+      show: { resource: ["document", "row"] },
     },
+    description:
+      'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+  },
+  {
+    displayName: "Table Name or ID",
+    name: "tableId",
+    type: "options",
+    typeOptions: { loadOptionsMethod: "getTables" },
+    required: true,
+    default: "",
+    displayOptions: { show: { resource: ["table"], operation: ["get"] } },
     description:
       'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
   },

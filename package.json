@@ -35,7 +35,8 @@
     "prepublishOnly": "n8n-node prerelease"
   },
   "files": [
-    "dist",
+    "dist/nodes",
+    "dist/credentials",
     "examples",
     "README.md",
     "LICENSE"

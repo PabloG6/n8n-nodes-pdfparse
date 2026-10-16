@@ -6,6 +6,30 @@ const {
   API_BASE,
   uploadPath,
 } = require("../dist/nodes/PdfParse/GenericFunctions");
+const { NodeHelpers } = require("n8n-workflow");
+
+test("n8n shows a table selector exactly for the operations that need one", () => {
+  const description = new PdfParse().description;
+  for (const [resource, operation, expected] of [
+    ["document", "uploadAndExtract", 1],
+    ["row", "getMany", 1],
+    ["table", "get", 1],
+    ["table", "getMany", 0],
+    ["job", "get", 0],
+  ]) {
+    const visible = description.properties.filter(
+      (property) =>
+        property.name === "tableId" &&
+        NodeHelpers.displayParameter(
+          { resource, operation },
+          property,
+          { typeVersion: 1 },
+          description,
+        ),
+    );
+    assert.equal(visible.length, expected, `${resource}.${operation}`);
+  }
+});
 
 function context(params, responses = [], inputs = [{ json: {} }]) {
   const requests = [];
