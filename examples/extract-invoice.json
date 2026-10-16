@@ -1,0 +1,388 @@
+{
+  "name": "Extract a sample invoice with PdfParse",
+  "nodes": [
+    {
+      "id": "start-manually",
+      "name": "Start manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [0, 0]
+    },
+    {
+      "id": "download-sample-invoice",
+      "name": "Download sample invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "url": "https://pdfparse.net/blog/api-examples/invoice.pdf",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "position": [220, 0]
+    },
+    {
+      "id": "upload-invoice",
+      "name": "Upload invoice",
+      "type": "n8n-nodes-pdfparse.pdfParse",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "document",
+        "operation": "uploadAndExtract",
+        "tableId": "SELECT_YOUR_TABLE",
+        "binaryPropertyName": "data",
+        "fileName": "n8n-sample-invoice.pdf"
+      },
+      "position": [440, 0]
+    },
+    {
+      "id": "initialize-attempt",
+      "name": "Initialize attempt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "attempt",
+              "name": "attempt",
+              "value": 1,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "position": [660, 0]
+    },
+    {
+      "id": "wait-for-extraction",
+      "name": "Wait for extraction",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "position": [880, 0]
+    },
+    {
+      "id": "get-job",
+      "name": "Get job",
+      "type": "n8n-nodes-pdfparse.pdfParse",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "job",
+        "operation": "get",
+        "jobId": "={{ $('Upload invoice').first().json.job_id }}",
+        "simplify": false
+      },
+      "position": [1100, 0]
+    },
+    {
+      "id": "job-completed",
+      "name": "Job completed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Job completed",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "position": [1320, 0]
+    },
+    {
+      "id": "get-invoice-rows",
+      "name": "Get invoice rows",
+      "type": "n8n-nodes-pdfparse.pdfParse",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "row",
+        "operation": "getMany",
+        "tableId": "={{ $('Upload invoice').first().json.table_id }}",
+        "returnAll": false,
+        "limit": 200,
+        "rowOptions": {
+          "documentId": "={{ $('Upload invoice').first().json.document_id }}"
+        }
+      },
+      "position": [1560, -140]
+    },
+    {
+      "id": "job-failed",
+      "name": "Job failed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Job failed",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "failed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "position": [1560, 160]
+    },
+    {
+      "id": "next-attempt",
+      "name": "Next attempt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "attempt",
+              "name": "attempt",
+              "value": "={{ $('Wait for extraction').item.json.attempt + 1 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "position": [1780, 300]
+    },
+    {
+      "id": "within-retry-budget",
+      "name": "Within retry budget",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Within retry budget",
+              "leftValue": "={{ $json.attempt }}",
+              "rightValue": 20,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "position": [2000, 300]
+    },
+    {
+      "id": "needs-review",
+      "name": "Needs review",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Stopped because extraction failed or did not complete within 20 checks. Open the job in PdfParse and review processing details before retrying.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "position": [2220, 100]
+    },
+    {
+      "id": "setup-instructions",
+      "name": "Setup instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "parameters": {
+        "content": "## Configure before running\nSelect your PdfParse API credential on all three PdfParse nodes. Select your Invoices table on Upload invoice. Get invoice rows uses the returned table and document IDs.\n\nRun once manually. The workflow stops after a failed job or 20 checks, 15 seconds apart. Rows are emitted only on the completed branch. Add Google Sheets after Get invoice rows when ready.\n\nUse only the synthetic sample PDF. Full instructions: https://github.com/PabloG6/n8n-nodes-pdfparse#tutorial-from-pdf-to-invoice-rows",
+        "height": 320,
+        "width": 620
+      },
+      "position": [0, -420]
+    }
+  ],
+  "connections": {
+    "Start manually": {
+      "main": [
+        [
+          {
+            "node": "Download sample invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download sample invoice": {
+      "main": [
+        [
+          {
+            "node": "Upload invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload invoice": {
+      "main": [
+        [
+          {
+            "node": "Initialize attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize attempt": {
+      "main": [
+        [
+          {
+            "node": "Wait for extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for extraction": {
+      "main": [
+        [
+          {
+            "node": "Get job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get job": {
+      "main": [
+        [
+          {
+            "node": "Job completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job completed": {
+      "main": [
+        [
+          {
+            "node": "Get invoice rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Job failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next attempt": {
+      "main": [
+        [
+          {
+            "node": "Within retry budget",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job failed": {
+      "main": [
+        [
+          {
+            "node": "Needs review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Next attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Within retry budget": {
+      "main": [
+        [
+          {
+            "node": "Wait for extraction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Needs review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

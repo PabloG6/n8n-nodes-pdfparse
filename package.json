@@ -1,0 +1,64 @@
+{
+  "name": "n8n-nodes-pdfparse",
+  "version": "0.1.0",
+  "description": "PdfParse nodes for uploading PDFs, starting extraction jobs, and retrieving structured table rows in n8n",
+  "license": "MIT",
+  "homepage": "https://pdfparse.net",
+  "keywords": [
+    "n8n-community-node-package",
+    "pdfparse",
+    "pdf",
+    "ocr",
+    "extraction"
+  ],
+  "author": {
+    "name": "PdfParse",
+    "email": "pdfparse@workspace.pdfparse.net",
+    "url": "https://pdfparse.net"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PabloG6/n8n-nodes-pdfparse.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PabloG6/n8n-nodes-pdfparse/issues"
+  },
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "build": "n8n-node build",
+    "dev": "n8n-node dev",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "test": "npm run build && node --test test/*.test.cjs",
+    "prepublishOnly": "n8n-node prerelease"
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "strict": true,
+    "credentials": [
+      "dist/credentials/PdfParseApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/PdfParse/PdfParse.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@n8n/node-cli": "0.53.1",
+    "@types/node": "^22.0.0",
+    "eslint": "9.32.0",
+    "n8n-workflow": "2.16.0",
+    "prettier": "3.6.2",
+    "typescript": "5.9.2"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
